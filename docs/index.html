@@ -1,0 +1,185 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>九州自駕六天五夜之旅 (福岡/長崎/熊本/由布院)</title>
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+    <style>
+        body { font-family: "Microsoft JhengHei", sans-serif; margin: 0; padding: 0; background: #f4f4f4; display: flex; flex-direction: column; height: 100vh; }
+        header { background: #2c3e50; color: white; padding: 15px; text-align: center; flex-shrink: 0; }
+        .container { display: flex; flex: 1; overflow: hidden; }
+        .itinerary-list { width: 40%; overflow-y: auto; padding: 20px; background: white; box-shadow: 2px 0 5px rgba(0,0,0,0.1); }
+        .map-container { width: 60%; height: 100%; }
+        .day-card { border-left: 5px solid #3498db; background: #fff; margin-bottom: 20px; padding: 15px; box-shadow: 0 2px 4px rgba(0,0,0,0.1); }
+        .day-title { font-size: 1.2em; font-weight: bold; color: #2c3e50; margin-bottom: 10px; display: flex; justify-content: space-between; }
+        .highlight { color: #e74c3c; font-weight: bold; font-size: 0.9em; }
+        .location-btn { display: inline-block; margin-top: 5px; padding: 5px 10px; background: #27ae60; color: white; text-decoration: none; border-radius: 4px; font-size: 0.8em; }
+        ul { padding-left: 20px; margin: 5px 0; }
+        li { margin-bottom: 5px; color: #555; }
+        
+        /* 手機版響應式調整 */
+        @media (max-width: 768px) {
+            .container { flex-direction: column-reverse; }
+            .itinerary-list { width: 100%; height: 50%; }
+            .map-container { width: 100%; height: 50%; }
+        }
+    </style>
+</head>
+<body>
+
+<header>
+    <h2>九州冬季自駕：福岡・長崎・熊本・由布院</h2>
+    <div style="font-size: 0.8em;">日期：2026/01/30 - 02/04｜重要：請務必預約雪胎</div>
+</header>
+
+<div class="container">
+    <div class="itinerary-list" id="itinerary-content">
+        </div>
+    <div id="map" class="map-container"></div>
+</div>
+
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<script>
+    // 行程資料
+    const tripData = [
+        {
+            day: "Day 1 (1/30 五)",
+            title: "抵達福岡 & 市區購物 (無車)",
+            route: "福岡機場 -> 博多/天神",
+            points: ["福岡機場", "博多站/天神區"],
+            details: [
+                "15:55 抵達福岡機場，搭地鐵進市區放行李。",
+                "晚上：博多車站或天神商圈購物。",
+                "晚餐：博多屋台或牛腸鍋。",
+                "住宿：福岡市區 (本日不租車)。"
+            ],
+            coords: [33.5902, 130.4207] // 博多站
+        },
+        {
+            day: "Day 2 (1/31 六)",
+            title: "取車 & 長崎原爆歷史巡禮",
+            route: "福岡 -> 長崎市",
+            points: ["長崎原爆資料館", "平和公園", "稻佐山夜景"],
+            details: [
+                "09:00 市區取車 (確認雪胎/ETC)。",
+                "10:00 前往長崎 (車程約2小時)。",
+                "下午：長崎原爆資料館、平和公園、浦上天主堂。",
+                "晚上：稻佐山觀賞千萬美金夜景。",
+                "住宿：長崎市區。"
+            ],
+            coords: [32.7745, 129.8624] // 長崎原爆資料館
+        },
+        {
+            day: "Day 3 (2/01 日)",
+            title: "橫渡有明海 & 熊本名城",
+            route: "長崎 -> 島原港 -> (渡輪) -> 熊本 -> 黑川/阿蘇",
+            points: ["島原港", "熊本渡輪", "熊本城", "黑川溫泉"],
+            details: [
+                "上午：開車前往島原港 (約1.5hr)。",
+                "中午：搭乘熊本渡輪 (Ocean Arrow) 直達熊本港 (30分鐘)。",
+                "下午：參觀熊本城、櫻之馬場城彩苑。",
+                "傍晚：前往黑川或阿蘇溫泉區 (山區注意結冰)。",
+                "住宿：黑川溫泉或阿蘇。"
+            ],
+            coords: [32.8062, 130.7058] // 熊本城
+        },
+        {
+            day: "Day 4 (2/02 一)",
+            title: "阿蘇火山絕景 & 湯布院",
+            route: "阿蘇 -> 山並公路 -> 由布院",
+            points: ["阿蘇草千里", "大觀峰", "九重夢大吊橋", "由布院金鱗湖"],
+            details: [
+                "上午：大觀峰、草千里、中岳火山口。",
+                "中午：行駛山並公路 (Yamanami Highway)。",
+                "下午：九重夢大吊橋 -> 抵達由布院。",
+                "傍晚：湯之坪街道散策、金鱗湖。",
+                "住宿：由布院溫泉。"
+            ],
+            coords: [33.2657, 131.3603] // 由布院
+        },
+        {
+            day: "Day 5 (2/03 二)",
+            title: "太宰府祈福 & 返回福岡",
+            route: "由布院 -> 太宰府 -> 福岡",
+            points: ["太宰府天滿宮", "鳥栖Outlet(選配)", "福岡市區"],
+            details: [
+                "上午：由布院最後巡禮。",
+                "下午：太宰府天滿宮參拜、吃梅枝餅。",
+                "備案：若想購物可加入鳥栖 Premium Outlets。",
+                "17:00 返回福岡市區飯店後單人還車，剩餘人員在飯店休息",
+                "晚餐：水炊雞肉鍋或鰻魚飯。"
+            ],
+            coords: [33.5215, 130.5349] // 太宰府
+        },
+        {
+            day: "Day 6 (2/04 三)",
+            title: "還車與歸途",
+            route: "福岡 -> 機場",
+            points: ["福岡機場國際線"],
+            details: [
+                "09:00 退房出發。",
+                "09:30 透過捷運前往國際機場",
+                "10:15 抵達機場國際航廈。",
+                "12:15 飛機起飛。"
+            ],
+            coords: [33.5859, 130.4447] // 福岡機場
+        }
+    ];
+
+    // 初始化地圖 (中心點設在九州中部)
+    var map = L.map('map').setView([33.1, 130.5], 8);
+
+    // 加入 OpenStreetMap 圖層
+    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+        attribution: '© OpenStreetMap contributors'
+    }).addTo(map);
+
+    // 定義座標點 (用於繪製路線)
+    const routePoints = [
+        [33.5902, 130.4207], // 福岡
+        [32.7745, 129.8624], // 長崎
+        [32.7634, 130.3705], // 島原港
+        [32.7761, 130.5982], // 熊本港
+        [32.8062, 130.7058], // 熊本城
+        [33.1118, 131.0945], // 黑川附近/阿蘇
+        [33.2657, 131.3603], // 由布院
+        [33.5215, 130.5349], // 太宰府
+        [33.5902, 130.4207]  // 回福岡
+    ];
+
+    // 繪製路線 (藍色線條)
+    var polyline = L.polyline(routePoints, {color: 'blue', weight: 4, opacity: 0.7}).addTo(map);
+
+    // 產生左側列表與地圖標記
+    const listContainer = document.getElementById('itinerary-content');
+
+    tripData.forEach((day, index) => {
+        // 1. 建立左側卡片
+        let html = `
+            <div class="day-card">
+                <div class="day-title">
+                    <span>${day.day}</span>
+                </div>
+                <strong>${day.title}</strong>
+                <ul>
+                    ${day.details.map(d => `<li>${d}</li>`).join('')}
+                </ul>
+                <a href="https://www.google.com/maps/search/?api=1&query=${day.points[0]}" target="_blank" class="location-btn">導航至：${day.points[0]}</a>
+            </div>
+        `;
+        listContainer.innerHTML += html;
+
+        // 2. 建立地圖標記 (Marker)
+        if(day.coords) {
+            L.marker(day.coords).addTo(map)
+                .bindPopup(`<b>${day.day}</b><br>${day.title}`);
+        }
+    });
+
+    // 調整地圖視野以包含所有路徑
+    map.fitBounds(polyline.getBounds());
+
+</script>
+</body>
+</html>
