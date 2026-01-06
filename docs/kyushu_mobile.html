@@ -1,0 +1,245 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>九州冬季自駕行</title>
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+    <style>
+        /* CSS Reset & 基礎設定 */
+        * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+        body { margin: 0; padding: 0; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif; background-color: #f0f2f5; color: #333; height: 100vh; display: flex; flex-direction: column; }
+        
+        /* 頭部導航 */
+        header { background: #0066cc; color: white; padding: 15px; text-align: center; box-shadow: 0 2px 5px rgba(0,0,0,0.1); flex-shrink: 0; z-index: 1000; }
+        header h1 { margin: 0; font-size: 1.2rem; font-weight: 700; }
+        header p { margin: 5px 0 0; font-size: 0.8rem; opacity: 0.9; }
+
+        /* 主要內容區 */
+        main { flex: 1; overflow-y: auto; position: relative; }
+        
+        /* 頁籤內容切換 */
+        .tab-content { display: none; height: 100%; }
+        .tab-content.active { display: block; }
+
+        /* 行程列表樣式 */
+        .timeline { padding: 15px; padding-bottom: 80px; /* 避開底部選單 */ }
+        .day-card { background: white; border-radius: 12px; padding: 15px; margin-bottom: 20px; box-shadow: 0 2px 8px rgba(0,0,0,0.05); position: relative; border-left: 5px solid #0066cc; }
+        .day-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px; border-bottom: 1px solid #eee; padding-bottom: 8px; }
+        .day-tag { background: #0066cc; color: white; padding: 4px 8px; border-radius: 4px; font-size: 0.8rem; font-weight: bold; }
+        .day-date { font-size: 0.85rem; color: #666; }
+        .day-title { font-size: 1.1rem; font-weight: bold; margin: 10px 0; color: #1a1a1a; }
+        .event-list { list-style: none; padding: 0; margin: 0; }
+        .event-list li { padding-left: 15px; position: relative; margin-bottom: 8px; font-size: 0.95rem; line-height: 1.5; color: #444; }
+        .event-list li::before { content: "•"; color: #0066cc; font-weight: bold; position: absolute; left: 0; }
+        .btn-nav { display: block; width: 100%; text-align: center; background: #e6f0ff; color: #0066cc; padding: 10px; border-radius: 8px; text-decoration: none; font-weight: bold; margin-top: 12px; font-size: 0.9rem; transition: background 0.2s; }
+        .btn-nav:active { background: #cfe2ff; }
+        
+        /* 警示框 */
+        .alert-box { background: #fff3cd; border: 1px solid #ffeeba; color: #856404; padding: 10px; border-radius: 8px; margin-bottom: 15px; font-size: 0.9rem; display: flex; align-items: center; }
+        .alert-icon { margin-right: 8px; font-size: 1.2rem; }
+
+        /* 地圖容器 */
+        #map { width: 100%; height: 100%; }
+
+        /* 底部導航欄 */
+        nav.bottom-nav { position: fixed; bottom: 0; left: 0; width: 100%; background: white; border-top: 1px solid #ddd; display: flex; height: 60px; z-index: 2000; padding-bottom: env(safe-area-inset-bottom); }
+        .nav-item { flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; color: #888; text-decoration: none; font-size: 0.8rem; cursor: pointer; -webkit-tap-highlight-color: transparent; }
+        .nav-item.active { color: #0066cc; }
+        .nav-icon { font-size: 1.4rem; margin-bottom: 2px; }
+
+    </style>
+</head>
+<body>
+
+<header>
+    <h1>九州自駕・長崎原爆與阿蘇絕景</h1>
+    <p>2026/01/30 - 02/04 (6天5夜)</p>
+</header>
+
+<main>
+    <div id="tab-list" class="tab-content active">
+        <div class="timeline">
+            
+            <div class="alert-box">
+                <span class="alert-icon">⚠️</span>
+                <div>
+                    <strong>雪地注意：</strong> 2月初山區(阿蘇/九重)極易結冰，租車請務必指定配備<strong>雪胎 (Snow Tires)</strong>。
+                </div>
+            </div>
+
+            <div class="day-card">
+                <div class="day-header">
+                    <span class="day-tag">Day 1</span>
+                    <span class="day-date">1/30 (五)</span>
+                </div>
+                <div class="day-title">抵達福岡 & 市區購物 (無車)</div>
+                <ul class="event-list">
+                    <li>15:55 抵達福岡機場 (FUK)</li>
+                    <li>搭地鐵/計程車至博多或天神飯店</li>
+                    <li>晚上：博多車站/天神商圈購物</li>
+                    <li>晚餐：博多屋台或牛腸鍋</li>
+                </ul>
+                <a href="https://www.google.com/maps/search/?api=1&query=博多車站" target="_blank" class="btn-nav">📍 導航：博多車站</a>
+            </div>
+
+            <div class="day-card">
+                <div class="day-header">
+                    <span class="day-tag">Day 2</span>
+                    <span class="day-date">1/31 (六)</span>
+                </div>
+                <div class="day-title">租車出發 & 長崎原爆巡禮</div>
+                <ul class="event-list">
+                    <li>09:00 市區取車 (檢查ETC/雪胎)</li>
+                    <li>10:00 前往長崎 (約2小時)</li>
+                    <li>午餐：長崎強棒麵</li>
+                    <li>下午：原爆資料館、平和公園</li>
+                    <li>晚上：稻佐山千萬美金夜景</li>
+                </ul>
+                <a href="https://www.google.com/maps/search/?api=1&query=長崎原爆資料館" target="_blank" class="btn-nav">📍 導航：長崎原爆資料館</a>
+            </div>
+
+            <div class="day-card">
+                <div class="day-header">
+                    <span class="day-tag">Day 3</span>
+                    <span class="day-date">2/01 (日)</span>
+                </div>
+                <div class="day-title">渡輪橫渡有明海 & 熊本城</div>
+                <ul class="event-list">
+                    <li>09:00 出發前往島原港</li>
+                    <li>10:30 搭乘熊本渡輪 (需預約)</li>
+                    <li>12:00 抵達熊本，午餐吃豬排/赤牛</li>
+                    <li>下午：參觀熊本城、城彩苑</li>
+                    <li>傍晚：前往黑川/阿蘇溫泉區</li>
+                </ul>
+                <a href="https://www.google.com/maps/search/?api=1&query=島原港" target="_blank" class="btn-nav">📍 導航：島原港 (渡輪乘船處)</a>
+            </div>
+
+            <div class="day-card">
+                <div class="day-header">
+                    <span class="day-tag">Day 4</span>
+                    <span class="day-date">2/02 (一)</span>
+                </div>
+                <div class="day-title">阿蘇火山絕景 & 湯布院</div>
+                <ul class="event-list">
+                    <li>上午：大觀峰、草千里 (雪景)</li>
+                    <li>中午：行駛山並公路 (景色絕美)</li>
+                    <li>下午：九重夢大吊橋 -> 由布院</li>
+                    <li>傍晚：湯之坪街道、金鱗湖</li>
+                </ul>
+                <a href="https://www.google.com/maps/search/?api=1&query=阿蘇草千里" target="_blank" class="btn-nav">📍 導航：阿蘇草千里</a>
+            </div>
+
+            <div class="day-card">
+                <div class="day-header">
+                    <span class="day-tag">Day 5</span>
+                    <span class="day-date">2/03 (二)</span>
+                </div>
+                <div class="day-title">太宰府祈福 & 返回福岡</div>
+                <ul class="event-list">
+                    <li>上午：由布院最後散策</li>
+                    <li>下午：太宰府天滿宮參拜</li>
+                    <li>備案：鳥栖 Outlet 購物</li>
+                    <li>17:00 返回福岡市區 (車停飯店或還車)</li>
+                    <li>晚餐：水炊雞肉鍋</li>
+                </ul>
+                <a href="https://www.google.com/maps/search/?api=1&query=太宰府天滿宮" target="_blank" class="btn-nav">📍 導航：太宰府天滿宮</a>
+            </div>
+
+            <div class="day-card" style="border-left-color: #e74c3c;">
+                <div class="day-header">
+                    <span class="day-tag" style="background:#e74c3c;">Day 6</span>
+                    <span class="day-date">2/04 (三)</span>
+                </div>
+                <div class="day-title">還車 & 歸途</div>
+                <ul class="event-list">
+                    <li>09:00 退房出發</li>
+                    <li>09:30 機場附近加油並還車</li>
+                    <li>10:15 抵達國際航廈報到</li>
+                    <li>12:15 飛機起飛</li>
+                </ul>
+                <a href="https://www.google.com/maps/search/?api=1&query=福岡機場國際線" target="_blank" class="btn-nav">📍 導航：福岡機場國際線</a>
+            </div>
+        </div>
+    </div>
+
+    <div id="tab-map" class="tab-content">
+        <div id="map"></div>
+    </div>
+</main>
+
+<nav class="bottom-nav">
+    <div class="nav-item active" onclick="switchTab('list', this)">
+        <span class="nav-icon">📋</span>
+        <span>詳細行程</span>
+    </div>
+    <div class="nav-item" onclick="switchTab('map', this)">
+        <span class="nav-icon">🗺️</span>
+        <span>路線地圖</span>
+    </div>
+</nav>
+
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<script>
+    // 頁籤切換邏輯
+    let mapInitialized = false;
+    let map;
+
+    function switchTab(tabName, element) {
+        // 更新按鈕樣式
+        document.querySelectorAll('.nav-item').forEach(el => el.classList.remove('active'));
+        element.classList.add('active');
+
+        // 更新內容顯示
+        document.querySelectorAll('.tab-content').forEach(el => el.classList.remove('active'));
+        if (tabName === 'list') {
+            document.getElementById('tab-list').classList.add('active');
+        } else {
+            document.getElementById('tab-map').classList.add('active');
+            if (!mapInitialized) {
+                initMap();
+                mapInitialized = true;
+            } else {
+                setTimeout(() => { map.invalidateSize(); }, 100); // 修正地圖在隱藏後顯示的大小問題
+            }
+        }
+    }
+
+    // 初始化地圖
+    function initMap() {
+        // 設定中心點
+        map = L.map('map').setView([33.1, 130.6], 8);
+
+        L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+            attribution: '© OpenStreetMap'
+        }).addTo(map);
+
+        // 路線座標點
+        const locations = [
+            { name: "福岡機場/市區", lat: 33.5902, lng: 130.4207 },
+            { name: "長崎原爆資料館", lat: 32.7745, lng: 129.8624 },
+            { name: "島原港 (渡輪)", lat: 32.7634, lng: 130.3705 },
+            { name: "熊本城", lat: 32.8062, lng: 130.7058 },
+            { name: "阿蘇/黑川", lat: 32.8842, lng: 131.0855 },
+            { name: "由布院", lat: 33.2657, lng: 131.3603 },
+            { name: "太宰府", lat: 33.5215, lng: 130.5349 },
+            { name: "福岡還車", lat: 33.5859, lng: 130.4447 }
+        ];
+
+        // 繪製路徑線
+        const latlngs = locations.map(loc => [loc.lat, loc.lng]);
+        const polyline = L.polyline(latlngs, {color: '#0066cc', weight: 5}).addTo(map);
+
+        // 加入標記
+        locations.forEach((loc, index) => {
+            L.marker([loc.lat, loc.lng]).addTo(map)
+                .bindPopup(`<b>${index + 1}. ${loc.name}</b>`);
+        });
+
+        // 自動調整視野
+        map.fitBounds(polyline.getBounds(), {padding: [50, 50]});
+    }
+</script>
+
+</body>
+</html>
