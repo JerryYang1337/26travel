@@ -1,0 +1,203 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>九州冬季自駕・家庭極致詳盡版</title>
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+    <style>
+        /* CSS Reset & 基礎設定 */
+        * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+        body { margin: 0; padding: 0; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif; background-color: #f0f2f5; color: #333; height: 100vh; display: flex; flex-direction: column; }
+        
+        /* 頭部導航 */
+        header { background: #0066cc; color: white; padding: 15px; text-align: center; box-shadow: 0 2px 5px rgba(0,0,0,0.1); flex-shrink: 0; z-index: 1000; }
+        header h1 { margin: 0; font-size: 1.2rem; font-weight: 700; }
+        header p { margin: 5px 0 0; font-size: 0.8rem; opacity: 0.9; }
+
+        /* 主要內容區 */
+        main { flex: 1; overflow-y: auto; position: relative; scroll-behavior: smooth; }
+        
+        /* 頁籤內容切換 */
+        .tab-content { display: none; height: 100%; }
+        .tab-content.active { display: block; }
+
+        /* 行程列表樣式 */
+        .timeline { padding: 15px; padding-bottom: 80px; }
+        .day-card { background: white; border-radius: 12px; padding: 15px; margin-bottom: 20px; box-shadow: 0 2px 8px rgba(0,0,0,0.05); position: relative; border-left: 5px solid #0066cc; }
+        .day-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px; border-bottom: 1px solid #eee; padding-bottom: 8px; }
+        .day-tag { background: #0066cc; color: white; padding: 4px 8px; border-radius: 4px; font-size: 0.8rem; font-weight: bold; }
+        .day-date { font-size: 0.85rem; color: #666; font-weight: 500; }
+        .day-title { font-size: 1.15rem; font-weight: bold; margin: 10px 0; color: #1a1a1a; }
+        
+        /* 詳細清單樣式 */
+        .event-list { list-style: none; padding: 0; margin: 0; }
+        .event-list li { padding-left: 20px; position: relative; margin-bottom: 12px; font-size: 0.95rem; line-height: 1.6; color: #444; }
+        .event-list li::before { content: ""; width: 8px; height: 8px; background: #0066cc; border-radius: 50%; position: absolute; left: 0; top: 8px; }
+        .event-list li strong { color: #2c3e50; font-weight: 700; }
+        .highlight-time { color: #e74c3c; font-weight: bold; font-family: monospace; font-size: 1.05em; margin-right: 5px; }
+
+        /* 按鈕樣式 */
+        .btn-group { display: flex; gap: 10px; margin-top: 15px; }
+        .btn-nav { flex: 1; text-align: center; background: #e6f0ff; color: #0066cc; padding: 10px; border-radius: 8px; text-decoration: none; font-weight: bold; font-size: 0.9rem; transition: background 0.2s; display: flex; align-items: center; justify-content: center; }
+        .btn-nav:active { background: #cfe2ff; }
+        
+        /* 警示框 */
+        .alert-box { background: #fff3cd; border: 1px solid #ffeeba; color: #856404; padding: 12px; border-radius: 8px; margin-bottom: 20px; font-size: 0.9rem; display: flex; align-items: start; gap: 10px; line-height: 1.5; }
+        .alert-icon { font-size: 1.2rem; }
+
+        /* 地圖容器 */
+        #map { width: 100%; height: 100%; }
+
+        /* 底部導航欄 */
+        nav.bottom-nav { position: fixed; bottom: 0; left: 0; width: 100%; background: white; border-top: 1px solid #ddd; display: flex; height: 60px; z-index: 2000; padding-bottom: env(safe-area-inset-bottom); }
+        .nav-item { flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; color: #888; text-decoration: none; font-size: 0.8rem; cursor: pointer; -webkit-tap-highlight-color: transparent; }
+        .nav-item.active { color: #0066cc; }
+        .nav-icon { font-size: 1.4rem; margin-bottom: 2px; }
+
+    </style>
+</head>
+<body>
+
+<header>
+    <h1>九州自駕・家庭極致詳盡版</h1>
+    <p>2026/01/30 - 02/04 (6天5夜)</p>
+</header>
+
+<main>
+    <div id="tab-list" class="tab-content active">
+        <div class="timeline">
+            
+            <div class="alert-box">
+                <span class="alert-icon">⚠️</span>
+                <div>
+                    <strong>重要提醒：</strong>
+                    <br>1. 租車：已確認 WC Class 大型車 + <strong>雪胎</strong>。
+                    <br>2. 船班：2/1 <strong>12:05</strong> 出發，請務必 11:30 前抵達島原港報到。
+                    <br>3. 還車：2/3 <strong>19:00</strong> 前必須還車。
+                </div>
+            </div>
+
+            <div class="day-card">
+                <div class="day-header">
+                    <span class="day-tag">Day 1</span>
+                    <span class="day-date">1/30 (五)</span>
+                </div>
+                <div class="day-title">抵達福岡 & 博多美食 (無車)</div>
+                <ul class="event-list">
+                    <li><span class="highlight-time">15:55</span> 抵達福岡機場 (FUK)。建議直接搭計程車前往博多飯店 (約¥2000)。</li>
+                    <li><span class="highlight-time">17:30</span> 飯店 Check-in 休息。</li>
+                    <li><span class="highlight-time">18:30</span> <strong>晚餐：博多牛腸鍋 (Motsunabe)</strong>。<br>推薦：博多車站旁「大山 (Oyama)」或「樂天地」。</li>
+                    <li><span class="highlight-time">20:00</span> <strong>博多車站逛街</strong><br>AMU PLAZA 買「博多甘王草莓」回飯店吃。</li>
+                </ul>
+                <div class="btn-group">
+                    <a href="https://www.google.com/maps/search/?api=1&query=33.579807738993864%2C130.42199624907377" target="_blank" class="btn-nav">📍 導航：今晚住宿</a>
+                    <a href="https://goo.gl/maps/generic_hakata_station" target="_blank" class="btn-nav">🍽️ 博多車站美食</a>
+                </div>
+            </div>
+
+            <div class="day-card">
+                <div class="day-header">
+                    <span class="day-tag">Day 2</span>
+                    <span class="day-date">1/31 (六)</span>
+                </div>
+                <div class="day-title">取車出發 & 長崎夜景</div>
+                <ul class="event-list">
+                    <li><span class="highlight-time">08:00</span> <strong>取車：博多站博多口店</strong><br>車型：WC Class 廂型車 (禁菸/雪胎)。檢查 ETC 卡是否插入。</li>
+                    <li><span class="highlight-time">11:00</span> <strong>長崎原爆資料館 & 平和公園</strong><br>感受歷史震撼，教育意義重。</li>
+                    <li><span class="highlight-time">13:00</span> <strong>午餐：四海樓 (強棒麵)</strong><br>位於南山手，建築壯觀，可看海景。</li>
+                    <li><span class="highlight-time">14:30</span> <strong>哥拉巴園 & 大浦天主堂</strong><br>異國風情洋房，適合拍照。</li>
+                    <li><span class="highlight-time">18:30</span> <strong>稻佐山千萬美金夜景</strong><br>世界新三大夜景，開車至山腰轉接駁車。</li>
+                </ul>
+                <div class="btn-group">
+                    <a href="https://maps.app.goo.gl/o6oJRWrarHYHzS3F7" target="_blank" class="btn-nav">📍 導航：今晚住宿</a>
+                    <a href="https://goo.gl/maps/nagasaki_peace_park" target="_blank" class="btn-nav">📍 導航：原爆資料館</a>
+                </div>
+            </div>
+
+            <div class="day-card" style="border-left-color: #f39c12;">
+                <div class="day-header">
+                    <span class="day-tag" style="background:#f39c12">Day 3</span>
+                    <span class="day-date">2/01 (日)</span>
+                </div>
+                <div class="day-title">渡輪橫渡 & 熊本阿蘇</div>
+                <ul class="event-list">
+                    <li><span class="highlight-time">09:00</span> <strong>離開長崎 (絕不能遲到)</strong><br>前往島原港需 1.5-2 小時。</li>
+                    <li><span class="highlight-time">11:30</span> <strong>抵達島原港</strong><br>辦理車輛登船手續。</li>
+                    <li><span class="highlight-time">12:05</span> <strong>🚢 渡輪出航 (熊本高速船)</strong><br>12:35 抵達熊本港。</li>
+                    <li><span class="highlight-time">13:20</span> <strong>午餐：勝烈亭 (炸豬排)</strong><br>米其林推薦，鹿兒島黑豚必吃。</li>
+                    <li><span class="highlight-time">14:40</span> <strong>熊本城 & 城彩苑</strong><br>參觀黑色天守閣，城彩苑吃海膽可樂餅。</li>
+                    <li><span class="highlight-time">16:30</span> 出發前往阿蘇內牧溫泉 (約 1hr 15min)。</li>
+                    <li><span class="highlight-time">18:30</span> <strong>晚餐：阿蘇赤牛丼</strong><br>若名店 Imakin 太多人，可選飯店會席料理。</li>
+                </ul>
+                <div class="btn-group">
+                    <a href="https://goo.gl/maps/shimabara_port" target="_blank" class="btn-nav">🚢 導航：島原港</a>
+                    <a href="https://goo.gl/maps/uchinomaki_onsen" target="_blank" class="btn-nav">♨️ 導航：內牧溫泉</a>
+                </div>
+            </div>
+
+            <div class="day-card" style="border-left-color: #27ae60;">
+                <div class="day-header">
+                    <span class="day-tag" style="background:#27ae60">Day 4</span>
+                    <span class="day-date">2/02 (一)</span>
+                </div>
+                <div class="day-title">阿蘇火山 & 九州最美公路</div>
+                <ul class="event-list">
+                    <li><span class="highlight-time">09:30</span> <strong>草千里之濱 & 火山口</strong><br>冬季銀白世界，絕美景色。</li>
+                    <li><span class="highlight-time">11:30</span> <strong>大觀峰展望台</strong><br>360度俯瞰阿蘇五岳(涅槃像)。</li>
+                    <li><span class="highlight-time">13:30</span> <strong>山並公路 (Yamanami Highway)</strong><br>途經瀨之本高原，風景極佳。</li>
+                    <li><span class="highlight-time">14:30</span> <strong>九重「夢」大吊橋</strong><br>日本第一高吊橋 (風大請戴帽)。</li>
+                    <li><span class="highlight-time">16:00</span> <strong>抵達由布院 (湯布院)</strong><br>逛湯之坪街道，買 B-Speak 蛋糕捲。</li>
+                </ul>
+                <div class="btn-group">
+                    <a href="https://goo.gl/maps/kusasenri" target="_blank" class="btn-nav">⛰️ 導航：草千里</a>
+                    <a href="https://goo.gl/maps/yufuin_station" target="_blank" class="btn-nav">♨️ 導航：由布院</a>
+                </div>
+            </div>
+
+            <div class="day-card">
+                <div class="day-header">
+                    <span class="day-tag">Day 5</span>
+                    <span class="day-date">2/03 (二)</span>
+                </div>
+                <div class="day-title">晨霧金鱗湖 & 準時還車</div>
+                <ul class="event-list">
+                    <li><span class="highlight-time">08:00</span> <strong>金鱗湖晨霧</strong><br>清晨最美，湖面飄渺。</li>
+                    <li><span class="highlight-time">10:30</span> 走高速公路前往太宰府 (約1.5hr)。</li>
+                    <li><span class="highlight-time">12:30</span> <strong>太宰府天滿宮</strong><br>參拜學問之神，必吃表參道「梅枝餅」。</li>
+                    <li><span class="highlight-time">15:30</span> <strong>返回博多 (務必加滿油)</strong><br>預留時間應對市區塞車。</li>
+                    <li><span class="highlight-time">17:30</span> 先到飯店放家人行李。</li>
+                    <li><span class="highlight-time">18:30</span> <strong>前往還車 (期限 19:00)</strong><br>地點：博多站博多口店。</li>
+                    <li><span class="highlight-time">19:30</span> <strong>晚餐：博多屋台體驗</strong><br>中洲或天神屋台，享受放鬆夜晚。</li>
+                </ul>
+                <div class="btn-group">
+                    <a href="https://www.google.com/maps/search/?api=1&query=33.5800368%2C130.4062282" target="_blank" class="btn-nav">📍 導航：今晚住宿</a>
+                    <a href="https://goo.gl/maps/toyota_rent_a_car_hakata" target="_blank" class="btn-nav">🚗 導航：還車地點</a>
+                </div>
+            </div>
+
+            <div class="day-card" style="border-left-color: #e74c3c;">
+                <div class="day-header">
+                    <span class="day-tag" style="background:#e74c3c;">Day 6</span>
+                    <span class="day-date">2/04 (三)</span>
+                </div>
+                <div class="day-title">最後採買 & 機場</div>
+                <ul class="event-list">
+                    <li><span class="highlight-time">09:30</span> 退房。</li>
+                    <li><span class="highlight-time">10:00</span> <strong>博多站最後衝刺</strong><br>推薦買：明太子仙貝、博多通利門、努努雞。</li>
+                    <li><span class="highlight-time">10:30</span> 搭計程車前往福岡機場國際線。</li>
+                    <li><span class="highlight-time">12:15</span> <strong>飛機起飛 ✈️</strong><br>滿載回憶回家。</li>
+                </ul>
+                <a href="https://goo.gl/maps/fukuoka_airport_intl" target="_blank" class="btn-nav">✈️ 導航：福岡機場國際線</a>
+            </div>
+        </div>
+    </div>
+
+    <div id="tab-map" class="tab-content">
+        <div id="map"></div>
+    </div>
+</main>
+
+<nav class="bottom-nav">
+    <div class="nav-item active" onclick="switchTab('list', this)">
+        <span class="nav-icon">📋
